@@ -11,6 +11,9 @@ SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
 
+-- Disable foreign key checks temporarily to allow dropping tables in any order
+SET FOREIGN_KEY_CHECKS = 0;
+
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -18,12 +21,23 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `lakshmi_finance`
+-- Database: `lakshmifinance`
 --
+-- ============================================================================
+-- IMPORTANT INSTRUCTIONS - READ BEFORE RUNNING:
+-- ============================================================================
+-- 1. In phpMyAdmin, FIRST select your database from the left sidebar
+--    (Database name may be: u632214049_lakshmifinance or similar in shared hosting)
+-- 2. Then click the "SQL" tab
+-- 3. Paste or import this SQL file content
+-- 4. Click "Go" to execute
+--
+-- If you get "No database selected" error, you forgot step 1 above!
+-- ============================================================================
 
 -- Create database if it doesn't exist
-CREATE DATABASE IF NOT EXISTS `lakshmi_finance` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-USE `lakshmi_finance`;
+-- Note: Database creation is disabled for shared hosting environments
+-- CREATE DATABASE IF NOT EXISTS `lakshmifinance` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 
 -- ============================================================================
 -- CRITICAL: Remove unique_customer_loan constraint FIRST (if table exists)
@@ -78,8 +92,14 @@ DEALLOCATE PREPARE stmt;
 DELIMITER $$
 --
 -- Procedures
+-- Note: Static analysis warnings about "DECLARE" and "END" are false positives.
+-- These are valid SQL statements within stored procedures when using DELIMITER $$.
+-- You can safely ignore these warnings - the procedures will execute correctly.
 --
-CREATE DEFINER=`root`@`localhost` PROCEDURE `CalculateLoanInterest` (IN `p_loan_id` INT, IN `p_interest_date` DATE, OUT `p_interest_amount` DECIMAL(10,2))   BEGIN
+
+-- Drop existing procedures if they exist (allows re-running this script)
+DROP PROCEDURE IF EXISTS `CalculateLoanInterest`$$
+CREATE PROCEDURE `CalculateLoanInterest` (IN `p_loan_id` INT, IN `p_interest_date` DATE, OUT `p_interest_amount` DECIMAL(10,2))   BEGIN
     DECLARE v_principal DECIMAL(10,2);
     DECLARE v_rate DECIMAL(5,2);
     DECLARE v_days INT;
@@ -100,7 +120,8 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `CalculateLoanInterest` (IN `p_loan_
     SET p_interest_amount = (v_principal * v_rate * v_days) / 100;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `CloseLoan` (IN `p_loan_id` INT, IN `p_closing_date` DATE, IN `p_total_interest_paid` DECIMAL(10,2))   BEGIN
+DROP PROCEDURE IF EXISTS `CloseLoan`$$
+CREATE PROCEDURE `CloseLoan` (IN `p_loan_id` INT, IN `p_closing_date` DATE, IN `p_total_interest_paid` DECIMAL(10,2))   BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
         ROLLBACK;
@@ -119,7 +140,8 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `CloseLoan` (IN `p_loan_id` INT, IN 
     COMMIT;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `GetCustomerStats` (IN `p_customer_id` INT)   BEGIN
+DROP PROCEDURE IF EXISTS `GetCustomerStats`$$
+CREATE PROCEDURE `GetCustomerStats` (IN `p_customer_id` INT)   BEGIN
     SELECT 
         c.customer_no,
         c.name,
@@ -145,6 +167,7 @@ DELIMITER ;
 -- Table structure for table `customers`
 --
 
+DROP TABLE IF EXISTS `customers`;
 CREATE TABLE `customers` (
   `id` int(11) NOT NULL,
   `customer_no` varchar(20) NOT NULL,
@@ -198,6 +221,7 @@ CREATE TABLE `daily_transaction_summary` (
 -- Table structure for table `groups`
 --
 
+DROP TABLE IF EXISTS `groups`;
 CREATE TABLE `groups` (
   `id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
@@ -210,6 +234,7 @@ CREATE TABLE `groups` (
 -- Table structure for table `interest`
 --
 
+DROP TABLE IF EXISTS `interest`;
 CREATE TABLE `interest` (
   `id` int(11) NOT NULL,
   `loan_id` int(11) NOT NULL,
@@ -224,6 +249,7 @@ CREATE TABLE `interest` (
 -- Table structure for table `loans`
 --
 
+DROP TABLE IF EXISTS `loans`;
 CREATE TABLE `loans` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `loan_no` varchar(20) NOT NULL,
@@ -248,9 +274,10 @@ CREATE TABLE `loans` (
   KEY `idx_loans_loan_no` (`loan_no`),
   KEY `idx_loans_status` (`status`),
   KEY `idx_loans_date` (`loan_date`),
-  KEY `idx_loans_customer_loan` (`customer_id`, `loan_no`),
-  CONSTRAINT `loans_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
-  CONSTRAINT `fk_loans_group` FOREIGN KEY (`group_id`) REFERENCES `groups` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+  KEY `idx_loans_customer_loan` (`customer_id`, `loan_no`)
+  -- Foreign key constraints will be added later using ALTER TABLE statements
+  -- CONSTRAINT `loans_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  -- CONSTRAINT `fk_loans_group` FOREIGN KEY (`group_id`) REFERENCES `groups` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -277,6 +304,7 @@ DELIMITER ;
 -- Table structure for table `loan_closings`
 --
 
+DROP TABLE IF EXISTS `loan_closings`;
 CREATE TABLE `loan_closings` (
   `id` int(11) NOT NULL,
   `loan_id` int(11) NOT NULL,
@@ -324,6 +352,7 @@ CREATE TABLE `loan_details` (
 -- Table structure for table `products`
 --
 
+DROP TABLE IF EXISTS `products`;
 CREATE TABLE `products` (
   `id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
@@ -353,6 +382,7 @@ CREATE TABLE `product_summary` (
 -- Table structure for table `transactions`
 --
 
+DROP TABLE IF EXISTS `transactions`;
 CREATE TABLE `transactions` (
   `id` int(11) NOT NULL,
   `date` date NOT NULL,
@@ -369,6 +399,7 @@ CREATE TABLE `transactions` (
 -- Table structure for table `users`
 --
 
+DROP TABLE IF EXISTS `users`;
 CREATE TABLE `users` (
   `id` int(11) NOT NULL,
   `username` varchar(50) NOT NULL,
@@ -393,7 +424,7 @@ INSERT INTO `users` (`id`, `username`, `password`, `name`, `email`, `role`, `cre
 --
 DROP TABLE IF EXISTS `customer_loan_summary`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `customer_loan_summary`  AS SELECT `c`.`id` AS `id`, `c`.`customer_no` AS `customer_no`, `c`.`name` AS `name`, `c`.`mobile` AS `mobile`, count(`l`.`id`) AS `total_loans`, sum(case when `l`.`status` = 'active' then 1 else 0 end) AS `active_loans`, sum(case when `l`.`status` = 'closed' then 1 else 0 end) AS `closed_loans`, sum(`l`.`principal_amount`) AS `total_principal`, sum(case when `l`.`status` = 'active' then `l`.`principal_amount` else 0 end) AS `active_principal` FROM (`customers` `c` left join `loans` `l` on(`c`.`id` = `l`.`customer_id`)) GROUP BY `c`.`id`, `c`.`customer_no`, `c`.`name`, `c`.`mobile` ;
+CREATE ALGORITHM=UNDEFINED SQL SECURITY DEFINER VIEW `customer_loan_summary`  AS SELECT `c`.`id` AS `id`, `c`.`customer_no` AS `customer_no`, `c`.`name` AS `name`, `c`.`mobile` AS `mobile`, count(`l`.`id`) AS `total_loans`, sum(case when `l`.`status` = 'active' then 1 else 0 end) AS `active_loans`, sum(case when `l`.`status` = 'closed' then 1 else 0 end) AS `closed_loans`, sum(`l`.`principal_amount`) AS `total_principal`, sum(case when `l`.`status` = 'active' then `l`.`principal_amount` else 0 end) AS `active_principal` FROM (`customers` `c` left join `loans` `l` on(`c`.`id` = `l`.`customer_id`)) GROUP BY `c`.`id`, `c`.`customer_no`, `c`.`name`, `c`.`mobile` ;
 
 -- --------------------------------------------------------
 
@@ -402,7 +433,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 DROP TABLE IF EXISTS `daily_transaction_summary`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `daily_transaction_summary`  AS SELECT `transactions`.`date` AS `date`, sum(case when `transactions`.`transaction_type` = 'credit' then `transactions`.`amount` else 0 end) AS `total_credit`, sum(case when `transactions`.`transaction_type` = 'debit' then `transactions`.`amount` else 0 end) AS `total_debit`, sum(case when `transactions`.`transaction_type` = 'credit' then `transactions`.`amount` else -`transactions`.`amount` end) AS `net_amount` FROM `transactions` GROUP BY `transactions`.`date` ORDER BY `transactions`.`date` DESC ;
+CREATE ALGORITHM=UNDEFINED SQL SECURITY DEFINER VIEW `daily_transaction_summary`  AS SELECT `transactions`.`date` AS `date`, sum(case when `transactions`.`transaction_type` = 'credit' then `transactions`.`amount` else 0 end) AS `total_credit`, sum(case when `transactions`.`transaction_type` = 'debit' then `transactions`.`amount` else 0 end) AS `total_debit`, sum(case when `transactions`.`transaction_type` = 'credit' then `transactions`.`amount` else -`transactions`.`amount` end) AS `net_amount` FROM `transactions` GROUP BY `transactions`.`date` ORDER BY `transactions`.`date` DESC ;
 
 -- --------------------------------------------------------
 
@@ -411,7 +442,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 DROP TABLE IF EXISTS `loan_details`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `loan_details`  AS SELECT `l`.`id` AS `id`, `l`.`loan_no` AS `loan_no`, `l`.`loan_date` AS `loan_date`, `l`.`principal_amount` AS `principal_amount`, `l`.`interest_rate` AS `interest_rate`, `l`.`total_weight` AS `total_weight`, `l`.`net_weight` AS `net_weight`, `l`.`pledge_items` AS `pledge_items`, `l`.`status` AS `status`, `c`.`customer_no` AS `customer_no`, `c`.`name` AS `customer_name`, `c`.`mobile` AS `mobile`, coalesce(sum(`i`.`interest_amount`),0) AS `total_interest_paid`, coalesce(`lc`.`total_interest_paid`,0) AS `closing_interest_paid` FROM (((`loans` `l` join `customers` `c` on(`l`.`customer_id` = `c`.`id`)) left join `interest` `i` on(`l`.`id` = `i`.`loan_id`)) left join `loan_closings` `lc` on(`l`.`id` = `lc`.`loan_id`)) GROUP BY `l`.`id`, `l`.`loan_no`, `l`.`loan_date`, `l`.`principal_amount`, `l`.`interest_rate`, `l`.`total_weight`, `l`.`net_weight`, `l`.`pledge_items`, `l`.`status`, `c`.`customer_no`, `c`.`name`, `c`.`mobile`, `lc`.`total_interest_paid` ;
+CREATE ALGORITHM=UNDEFINED SQL SECURITY DEFINER VIEW `loan_details`  AS SELECT `l`.`id` AS `id`, `l`.`loan_no` AS `loan_no`, `l`.`loan_date` AS `loan_date`, `l`.`principal_amount` AS `principal_amount`, `l`.`interest_rate` AS `interest_rate`, `l`.`total_weight` AS `total_weight`, `l`.`net_weight` AS `net_weight`, `l`.`pledge_items` AS `pledge_items`, `l`.`status` AS `status`, `c`.`customer_no` AS `customer_no`, `c`.`name` AS `customer_name`, `c`.`mobile` AS `mobile`, coalesce(sum(`i`.`interest_amount`),0) AS `total_interest_paid`, coalesce(`lc`.`total_interest_paid`,0) AS `closing_interest_paid` FROM (((`loans` `l` join `customers` `c` on(`l`.`customer_id` = `c`.`id`)) left join `interest` `i` on(`l`.`id` = `i`.`loan_id`)) left join `loan_closings` `lc` on(`l`.`id` = `lc`.`loan_id`)) GROUP BY `l`.`id`, `l`.`loan_no`, `l`.`loan_date`, `l`.`principal_amount`, `l`.`interest_rate`, `l`.`total_weight`, `l`.`net_weight`, `l`.`pledge_items`, `l`.`status`, `c`.`customer_no`, `c`.`name`, `c`.`mobile`, `lc`.`total_interest_paid` ;
 
 -- --------------------------------------------------------
 
@@ -420,7 +451,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 DROP TABLE IF EXISTS `product_summary`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `product_summary`  AS SELECT `p`.`id` AS `id`, `p`.`name` AS `name`, `p`.`name_tamil` AS `name_tamil`, `g`.`name` AS `group_name`, count(distinct `l`.`id`) AS `loan_count`, sum(`l`.`principal_amount`) AS `total_value` FROM ((`products` `p` left join `groups` `g` on(`p`.`group_id` = `g`.`id`)) left join `loans` `l` on(`l`.`pledge_items` like concat('%',`p`.`name`,'%'))) GROUP BY `p`.`id`, `p`.`name`, `p`.`name_tamil`, `g`.`name` ;
+CREATE ALGORITHM=UNDEFINED SQL SECURITY DEFINER VIEW `product_summary`  AS SELECT `p`.`id` AS `id`, `p`.`name` AS `name`, `p`.`name_tamil` AS `name_tamil`, `g`.`name` AS `group_name`, count(distinct `l`.`id`) AS `loan_count`, sum(`l`.`principal_amount`) AS `total_value` FROM ((`products` `p` left join `groups` `g` on(`p`.`group_id` = `g`.`id`)) left join `loans` `l` on(`l`.`pledge_items` like concat('%',`p`.`name`,'%'))) GROUP BY `p`.`id`, `p`.`name`, `p`.`name_tamil`, `g`.`name` ;
 
 --
 -- Indexes for dumped tables
@@ -452,14 +483,16 @@ ALTER TABLE `interest`
 --
 -- Indexes for table `loans`
 -- NOTE: NO UNIQUE constraints - allows multiple loans per customer
+-- NOTE: PRIMARY KEY and indexes are already defined in CREATE TABLE statement above
+-- No need to add them again via ALTER TABLE
 --
-ALTER TABLE `loans`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_loans_loan_no` (`loan_no`),
-  ADD KEY `idx_loans_customer_id` (`customer_id`),
-  ADD KEY `idx_loans_status` (`status`),
-  ADD KEY `idx_loans_date` (`loan_date`),
-  ADD KEY `idx_loans_customer_loan` (`customer_id`, `loan_no`);
+-- ALTER TABLE `loans`
+--   ADD PRIMARY KEY (`id`),
+--   ADD KEY `idx_loans_loan_no` (`loan_no`),
+--   ADD KEY `idx_loans_customer_id` (`customer_id`),
+--   ADD KEY `idx_loans_status` (`status`),
+--   ADD KEY `idx_loans_date` (`loan_date`),
+--   ADD KEY `idx_loans_customer_loan` (`customer_id`, `loan_no`);
 
 --
 -- Indexes for table `loan_closings`
@@ -660,7 +693,7 @@ DEALLOCATE PREPARE stmt;
 SET @preparedStatement = (SELECT IF(
   (SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE table_schema = @dbname AND table_name = @tablename AND constraint_name = 'fk_loans_group') > 0,
   "SELECT 'Foreign key fk_loans_group already exists' AS result",
-  "ALTER TABLE loans ADD CONSTRAINT fk_loans_group FOREIGN KEY (group_id) REFERENCES groups(id)"
+  "ALTER TABLE loans ADD CONSTRAINT fk_loans_group FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE SET NULL ON UPDATE CASCADE"
 ));
 PREPARE stmt FROM @preparedStatement;
 EXECUTE stmt;
@@ -780,6 +813,19 @@ PREPARE stmt FROM @preparedStatement;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
+-- Add foreign key for group_id if it doesn't exist (direct method)
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS 
+   WHERE table_schema = @dbname 
+   AND table_name = 'loans' 
+   AND constraint_name = 'fk_loans_group') > 0,
+  "SELECT 'Foreign key fk_loans_group already exists' AS result",
+  "ALTER TABLE loans ADD CONSTRAINT fk_loans_group FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE SET NULL ON UPDATE CASCADE"
+));
+PREPARE stmt FROM @preparedStatement;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 --
 -- Constraints for table `loan_closings`
 --
@@ -851,11 +897,15 @@ ALTER TABLE `products`
 --    between customers and loans tables.
 --
 
+-- Re-enable foreign key checks
+SET FOREIGN_KEY_CHECKS = 1;
+
 COMMIT;
 -- Quick SQL Fix: Remove unique_customer_loan constraint
 -- Run this SQL file in phpMyAdmin or MySQL command line to fix the duplicate entry error
 
-USE `lakshmi_finance`;
+-- USE statement removed - make sure you have selected your database in phpMyAdmin
+-- USE `lakshmifinance`;
 
 -- Method 1: Try DROP INDEX
 ALTER TABLE `loans` DROP INDEX IF EXISTS `unique_customer_loan`;
@@ -872,7 +922,7 @@ SELECT
     non_unique,
     GROUP_CONCAT(column_name ORDER BY seq_in_index) as columns
 FROM INFORMATION_SCHEMA.STATISTICS 
-WHERE table_schema = 'lakshmi_finance' 
+WHERE table_schema = DATABASE() 
 AND table_name = 'loans' 
 AND non_unique = 0
 AND index_name != 'PRIMARY'

@@ -21,9 +21,15 @@ $pageParam = isset($_GET['page']) ? htmlspecialchars($_GET['page']) : '';
 </head>
 <body>
     <div class="dashboard-container">
+        <!-- Sidebar Overlay (Mobile Only) -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        
         <!-- Sidebar -->
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
+                <button class="sidebar-close" id="sidebarClose" aria-label="Close sidebar">
+                    <i class="fas fa-times"></i>
+                </button>
                 <div class="sidebar-logo">
                     <i class="fas fa-shield-alt"></i>
                 </div>

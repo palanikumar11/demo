@@ -2,10 +2,51 @@ document.addEventListener('DOMContentLoaded', function() {
     // Sidebar toggle functionality
     const menuToggle = document.getElementById('menuToggle');
     const sidebar = document.getElementById('sidebar');
+    const sidebarClose = document.getElementById('sidebarClose');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    
+    // Function to toggle sidebar and overlay
+    function toggleSidebar() {
+        if (sidebar) {
+            sidebar.classList.toggle('open');
+            if (sidebarOverlay) {
+                if (sidebar.classList.contains('open')) {
+                    sidebarOverlay.classList.add('active');
+                } else {
+                    sidebarOverlay.classList.remove('active');
+                }
+            }
+        }
+    }
+    
+    // Function to close sidebar
+    function closeSidebar() {
+        if (sidebar) {
+            sidebar.classList.remove('open');
+            if (sidebarOverlay) {
+                sidebarOverlay.classList.remove('active');
+            }
+        }
+    }
     
     if (menuToggle && sidebar) {
         menuToggle.addEventListener('click', function() {
-            sidebar.classList.toggle('open');
+            toggleSidebar();
+        });
+    }
+    
+    // Sidebar close button functionality (mobile only)
+    if (sidebarClose && sidebar) {
+        sidebarClose.addEventListener('click', function(e) {
+            e.stopPropagation();
+            closeSidebar();
+        });
+    }
+    
+    // Close sidebar when clicking overlay
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', function() {
+            closeSidebar();
         });
     }
     
@@ -24,6 +65,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update active states
             navItems.forEach(nav => nav.classList.remove('active'));
             this.classList.add('active');
+            
+            // Close sidebar on mobile after navigation
+            if (window.innerWidth <= 767) {
+                closeSidebar();
+            }
         });
     });
     
